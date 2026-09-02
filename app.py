@@ -17,11 +17,11 @@ mi_robot = Robot(
 )
 
 # Inicialización de Sensores
-sensor_frente = ColorSensor(config.PORT_SENSOR_FRENTE)
+sensor = ColorSensor(config.PORT_SENSOR_FRENTE)
 
 # 2. Controladores de alto nivel
-misiones = Misiones(mi_robot, sensor_frente)
-armador = ArmadorMosaicos(mi_robot, sensor_frente)
+misiones = Misiones(mi_robot, sensor)
+armador = ArmadorMosaicos(mi_robot, sensor)
 revisador_bateria = RevisadorBateria(mi_robot)
 
 # 3. Flujo Principal
@@ -32,7 +32,7 @@ if __name__ == "__main__":
         #, # ZONA DE PRUEBAS: Descomenta la misión que quieras ejecutar
         # misiones.prueba_precision()
 
-        # misiones.pruebasIndividuales()
+        # # misiones.pruebasIndividuales()
 
         # # 1. Primera Misión
         # misiones.cemento_y_llana()
@@ -65,6 +65,13 @@ if __name__ == "__main__":
         # misiones.agarrar_bloques_azules_y_pala()
         # gc.collect()
 
-        # 9. Novena misión 
+        # # 9. Novena misión 
+        # armador.armar(numero_mosaico)
+
         misiones.ejecutar_matriz_4()
-        gc.collect()
+
+
+        # misiones.video()
+
+
+        # misiones.pruebasuwu()

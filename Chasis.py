@@ -32,10 +32,14 @@ class Chasis:
         else:
             self.drive_base.straight(distancia_mm, then=frenado, wait=wait_after)
 
-    def mover_en_arco(self, radio_cm, angulo=None, distancia_cm=None, stop=Stop.HOLD, wait_after=True, margen_grados=0, margen_cm=0):
+    def mover_en_arco(self, radio_cm, angulo=None, distancia_cm=None, stop=Stop.HOLD, wait_after=True, margen_grados=0, margen_cm=0, velocidad=None):
         radio_mm = radio_cm * 10
         distancia_mm = distancia_cm * 10 if distancia_cm is not None else None
-        
+
+        if velocidad is not None:
+            vel_segura = int(min(abs(velocidad), 930))
+            self.drive_base.settings(straight_speed=vel_segura)
+
         if wait_after and (margen_grados > 0 or margen_cm > 0):
             self.drive_base.arc(radio_mm, angle=angulo, distance=distancia_mm, then=stop, wait=False)
             
@@ -56,15 +60,6 @@ class Chasis:
         else:
             self.drive_base.arc(radio_mm, angle=angulo, distance=distancia_mm, then=stop, wait=wait_after)
 
-    def girar_sobre_eje(self, grados, wait_after=True, margen_grados=0):
-        if wait_after and margen_grados > 0:
-            angulo_inicial = self.drive_base.angle()
-            self.drive_base.turn(grados, wait=False)
-            while abs(self.drive_base.angle() - angulo_inicial) < (abs(grados) - margen_grados):
-                if self.drive_base.done(): break # FIX ANTI-CRASHEO
-                wait(1)
-        else:
-            self.drive_base.turn(grados, wait=wait_after)
 
     def giro_preciso(self, angulo_objetivo, kp_nuevo=2.5, tolerancia=1, wait_after=True, margen_grados=0):
         """
@@ -141,6 +136,71 @@ class Chasis:
             wait(tiempo_ms)
         self.motor_izquierda.brake()
         self.motor_derecha.brake()
+
+    def acomodar(self, iteraciones=5, potencia=100, tiempo_ms=60, wait_after=True):
+        if not wait_after:
+            self.motor_izquierda.dc(potencia)
+            self.motor_derecha.dc(-potencia)
+            return
+
+        self.drive_base.stop()
+        
+        # 1. Guardamos la posición matemática exacta antes de empezar (nuestro punto cero)
+        angulo_izq_inicial = self.motor_izquierda.angle()
+        angulo_der_inicial = self.motor_derecha.angle()
+
+        # 2. Ejecutamos la sacudida rápida y violenta con voltaje directo
+        for _ in range(iteraciones):
+            self.motor_izquierda.dc(potencia)
+            self.motor_derecha.dc(-potencia)
+            wait(tiempo_ms)
+            self.motor_izquierda.dc(-potencia)
+            self.motor_derecha.dc(potencia)
+            wait(tiempo_ms)
+            
+        # 3. CORRECCIÓN ESTRICTA: Sin importar cuánto derrapó o se desvió por el voltaje,
+        # obligamos a los motores a regresar exactamente a los grados originales.
+        velocidad_regreso = 1000  # Máxima velocidad en grados/s para que sea instantáneo
+        self.motor_izquierda.run_target(velocidad_regreso, angulo_izq_inicial, wait=False)
+        self.motor_derecha.run_target(velocidad_regreso, angulo_der_inicial, wait=True)
+        
+        # Clavamos los motores para asegurar que no se muevan por inercia
+        self.motor_izquierda.hold()
+        self.motor_derecha.hold()
+
+
+    def acomodar_estable(self, iteraciones=5, potencia=80, tiempo_ms=60, wait_after=True):
+        self.drive_base.stop()
+        
+        velocidad = int(potencia * 8) 
+        amplitud = int((velocidad * tiempo_ms) / 1000)
+        
+        # Registramos el punto de anclaje inamovible
+        centro_izq = self.motor_izquierda.angle()
+        centro_der = self.motor_derecha.angle()
+
+        # Movimiento violento
+        for _ in range(iteraciones):
+            self.motor_izquierda.run_target(velocidad, centro_izq + amplitud, wait=False)
+            self.motor_derecha.run_target(velocidad, centro_der - amplitud, wait=True)
+            
+            self.motor_izquierda.run_target(velocidad, centro_izq - amplitud, wait=False)
+            self.motor_derecha.run_target(velocidad, centro_der + amplitud, wait=True)
+
+        # CORRECCIÓN PARA QUEDAR PERFECTAMENTE RECTO
+        # Reducimos la velocidad a la mitad solo para el último movimiento de regreso.
+        # Esto elimina el overshoot y obliga a los engranajes a encajar con precisión.
+        velocidad_regreso = int(velocidad * 0.4) 
+        
+        self.motor_izquierda.run_target(velocidad_regreso, centro_izq, wait=False)
+        self.motor_derecha.run_target(velocidad_regreso, centro_der, wait=True)
+        
+        if wait_after:
+            self.motor_izquierda.hold()
+            self.motor_derecha.hold()
+            # Tiempo crítico: Le damos 150ms al hub para que el PID termine de 
+            # estabilizar las fuerzas de los motores antes de que el código siga avanzando.
+            wait(150)
 
     def compensar_voltaje(self, potencia_deseada):
         voltaje_actual = self.hub.battery.voltage()

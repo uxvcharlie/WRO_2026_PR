@@ -1,7 +1,7 @@
 from pybricks.parameters import Stop
 from pybricks.tools import wait
 from pybricks.pupdevices import Motor
-import config # Movido arriba para eliminar lag de I/O en ejecución
+import config
 
 class MecanismoBase:
 
@@ -93,6 +93,15 @@ class GarraTrasera(MecanismoBase):
         # ROBOCOP no puede perder tiempo en rampas de aceleración lentas.
         self.motor.control.limits(speed=1500, acceleration=5000)
 
+
+    def mover(self, grados: int, velocidad=600, wait_after=True, frenado=Stop.HOLD, margen_grados=0):
+        """
+        Movimiento vectorial. El signo de 'grados' dicta la dirección.
+        (Ej: positivo = cerrar/bajar, negativo = abrir/subir).
+        Máxima eficiencia computacional para el ciclo de CPU.
+        """
+        self.mover_angulo(grados, velocidad, wait_after, frenado, margen_grados)
+
     # --- MOVIMIENTOS RELATIVOS SEMÁNTICOS ---
     def bajar(self, grados, velocidad=600, wait_after=True, frenado=Stop.HOLD, margen_grados=0):
         """Baja la garra un número específico de grados."""
@@ -128,7 +137,7 @@ class GarraTrasera(MecanismoBase):
             trigger_mm = abs(distancia_total_mm)
             
         vel_segura = min(abs(vel_chasis), 930)
-        _, accel_lin, vel_giro, accel_giro = chasis.drive_base.settings()
+        vel_original, accel_lin, vel_giro, accel_giro = chasis.drive_base.settings()
         chasis.drive_base.settings(vel_segura, accel_lin, vel_giro, accel_giro)
         
         dist_inicial = chasis.drive_base.distance()
@@ -147,7 +156,27 @@ class GarraTrasera(MecanismoBase):
         if not garra_disparada:
             self.mover(grados_garra, velocidad=vel_garra, wait_after=False, frenado=Stop.HOLD)
 
-        chasis.drive_base.settings(config.STRAIGHT_SPEED, accel_lin, vel_giro, accel_giro)
+        chasis.drive_base.settings(vel_original, accel_lin, vel_giro, accel_giro)
+
+
+    def mover_torque(self, grados, velocidad=180, wait_after=True, frenado=Stop.HOLD, retraso_inicial_ms=0):
+        """
+        Versión adaptada: Hace una pausa opcional antes de ejecutar un movimiento
+        a velocidad constante.
+        """
+        if retraso_inicial_ms > 0:
+            wait(retraso_inicial_ms)
+
+        if grados == 0:
+            return
+
+        # Cambiado de self.motor_torque a self.motor (tu variable real)
+        self.motor.run_angle(
+            velocidad,
+            grados,
+            then=frenado,
+            wait=wait_after
+        )
 
 class Mecanismos:
     def __init__(self, motor_garra_delantera: Motor, motor_elevador_del: Motor, motor_garra_trasera: Motor):
