@@ -34,6 +34,16 @@ if __name__ == "__main__":
 
         # # misiones.pruebasIndividuales()
 
+        misiones.pruebasuwu()
+
+        # misiones.cemento_llana_nuevo()
+        # misiones.agarrar_verdes_nuevo()
+        # misiones.escanear_dejar_verde_nuevo()
+        # misiones.agarrar_amarillos_nuevo()
+        # misiones.agarrar_azules_nuevo()
+        # misiones.agarrar_pala_nuevo()
+        # misiones.dejar_amarillos_nuevo()
+
         # # 1. Primera Misión
         # misiones.cemento_y_llana()
         # gc.collect() # Limpiamos la RAM de las variables temporales de la misión anterior
@@ -68,10 +78,26 @@ if __name__ == "__main__":
         # # 9. Novena misión 
         # armador.armar(numero_mosaico)
 
-        misiones.ejecutar_matriz_4()
+
+
+
+        """ Recorrido 'nuevo' de hacerlo sin agarrar los cementos blancos."""
+
+        """Matrices"""
+
+        # misiones.ejecutar_matriz_1()
+
+        # misiones.ejecutar_matriz_2()
+
+        # misiones.ejecutar_matriz_3()
+
+        # misiones.ejecutar_matriz_4()
+
+        # misiones.ejecutar_matriz_5()
+
+        # misiones.pruebasuwu()
 
 
         # misiones.video()
 
 
-        # misiones.pruebasuwu()
